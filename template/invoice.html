@@ -206,14 +206,14 @@
                     <b>{{$item.description}}</b>
                 </td>
                 <td class="text-right">
-                    <p>Rp.{{ $item.price }}</p>
+                    <p>{{ $item.price }}</p>
                 </td>
             </tr>
             {{ end }}
             <tr>
                 <td></td>
                 <td class="border-top"><b>Total</b></td>
-                <td class="text-right border-top"><b>Rp.{{ .data.total }}</b></td>
+                <td class="text-right border-top"><b>{{ .data.total }}</b></td>
             </tr>
             </tbody>
         </table>
