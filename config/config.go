@@ -21,6 +21,7 @@ type AppConfig struct {
 	AppEnv                string
 	SignatureKey          string
 	Database              Database
+	Redis                 Redis
 	RateLimiterMaxRequest float64
 	RateLimiterTimeSecond int
 	InternalService       InternalService
@@ -39,6 +40,12 @@ type Database struct {
 	MaxLifeTimeConnection int
 	MaxIdleConnection     int
 	MaxIdleTime           int
+}
+
+type Redis struct {
+	Addr     string
+	DB       int
+	Password string
 }
 
 type Minio struct {
@@ -96,6 +103,7 @@ func Load() AppConfig {
 	kafkaMaxRetry, _ := strconv.Atoi(mustEnv("KAFKA_MAX_RETRY"))
 	kafkaBrokers := strings.Split(mustEnv("KAFKA_BROKERS"), ",")
 	midtransIsProd, _ := strconv.ParseBool(mustEnv("MIDTRANS_IS_PRODUCTION"))
+	redisDb, _ := strconv.Atoi(mustEnv("REDIS_DB"))
 
 	return AppConfig{
 		Port:         port,
@@ -112,6 +120,11 @@ func Load() AppConfig {
 			MaxLifeTimeConnection: dbMaxLifeTimeConnection,
 			MaxIdleConnection:     dbMaxIdleConnection,
 			MaxIdleTime:           dbMaxIdleTime,
+		},
+		Redis: Redis{
+			Addr:     mustEnv("REDIS_ADDR"),
+			DB:       redisDb,
+			Password: mustEnv("REDIS_PASSWORD"),
 		},
 		RateLimiterMaxRequest: float64(rateLimiterMaxRequest),
 		RateLimiterTimeSecond: rateLimiterTimeSecond,
