@@ -61,24 +61,11 @@ RUN go build -o payment-service .
 # - aplikasi berjalan sebagai user biasa (bukan root), jadi lebih aman
 # - di production kita tidak butuh compiler go
 # - Install wkhtmltopdf di final image (Debian-based)
-FROM debian:bookworm-slim
+FROM alpine:latest
 
-# install wkhtmltopdf + full dependencies (FIX rendering issue)
-RUN apt-get update && apt-get install -y \
-    wkhtmltopdf \
-    ca-certificates \
-    fonts-dejavu \
-    fonts-liberation \
-    fontconfig \
-    libxrender1 \
-    libxext6 \
-    libx11-6 \
-    libjpeg62-turbo \
-    libpng16-16 \
-    xfonts-base \
-    xfonts-75dpi \
-    tzdata \
-    && rm -rf /var/lib/apt/lists/*
+# install tzdata untuk suport timezone
+# secara default, alpine tidak punya database timezone
+RUN apk add --no-cache tzdata
 
 # Set the timezone environment variable (can be overridden by .env)
 ENV TZ=Asia/Jakarta
@@ -104,17 +91,8 @@ WORKDIR /app
 # - bisa modifikasi filesystem container
 # - lebih berbahaya
 # dengan USER userapp, aplikasi berjalan sebagai user biasa (best practice security di production)
-RUN groupadd -g 1001 binarygroup && \
-    useradd -u 1001 -g binarygroup -m userapp
-
-# XDG runtime
-ENV XDG_RUNTIME_DIR=/tmp/runtime-userapp
-RUN install -d -m 700 -o userapp -g binarygroup /tmp/runtime-userapp
-
-# BUAT DIR + SET OWNER (INI YANG FIX)
-RUN mkdir -p /tmp/runtime-userapp && \
-    chown userapp:binarygroup /tmp/runtime-userapp && \
-    chmod 700 /tmp/runtime-userapp
+RUN addgroup -g 1001 binarygroup
+RUN adduser -D -u 1001 -G binarygroup userapp
 
 # copy the binary from the builder stage
 # ini bagian inti multi-stage:
