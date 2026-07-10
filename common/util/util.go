@@ -5,14 +5,16 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
+	"io"
 	"math"
+	"mime/multipart"
+	"net/http"
 	"os"
 	"reflect"
 	"strconv"
 	"strings"
 	"text/template"
 
-	"github.com/SebastiaanKlippert/go-wkhtmltopdf"
 	"github.com/dustin/go-humanize"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/viper"
@@ -181,35 +183,63 @@ func GeneratePDFFromHTML(htmlTemplate string, data any) ([]byte, error) {
 		"add1": add1,
 	}
 
-	template, err := template.New("htmlTemplate").Funcs(funcMap).Parse(htmlTemplate)
+	tmpl, err := template.New("htmlTemplate").Funcs(funcMap).Parse(htmlTemplate)
 	if err != nil {
 		return nil, err
 	}
 
 	var filledTemplate bytes.Buffer
-	if err := template.Execute(&filledTemplate, data); err != nil {
+	if err := tmpl.Execute(&filledTemplate, data); err != nil {
 		return nil, err
 	}
-	htmlContent := filledTemplate.String()
 
-	pdfGenerator, err := wkhtmltopdf.NewPDFGenerator()
+	// Membuat multipart form
+	var body bytes.Buffer
+	writer := multipart.NewWriter(&body)
+
+	part, err := writer.CreateFormFile("files", "index.html")
 	if err != nil {
-		logrus.Errorf("failed to create pdf generator: %v", err)
 		return nil, err
 	}
 
-	pdfGenerator.Dpi.Set(600)
-	pdfGenerator.NoCollate.Set(false)
-	pdfGenerator.Orientation.Set(wkhtmltopdf.OrientationPortrait)
-	pdfGenerator.PageSize.Set(wkhtmltopdf.PageSizeA4)
-	pdfGenerator.Grayscale.Set(false)
-	pdfGenerator.AddPage(wkhtmltopdf.NewPageReader(strings.NewReader(htmlContent)))
+	if _, err := part.Write(filledTemplate.Bytes()); err != nil {
+		return nil, err
+	}
 
-	err = pdfGenerator.Create()
+	if err := writer.Close(); err != nil {
+		return nil, err
+	}
+
+	url := os.Getenv("GOTENBERG_URL")
+	req, err := http.NewRequest(
+		http.MethodPost,
+		url+"/forms/chromium/convert/html",
+		&body,
+	)
 	if err != nil {
-		logrus.Errorf("failed to create pdf: %v", err)
 		return nil, err
 	}
 
-	return pdfGenerator.Bytes(), err
+	req.Header.Set("Content-Type", writer.FormDataContentType())
+
+	client := &http.Client{}
+
+	resp, err := client.Do(req)
+	if err != nil {
+		logrus.Errorf("failed to call gotenberg: %v", err)
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		msg, _ := io.ReadAll(resp.Body)
+		return nil, fmt.Errorf("gotenberg error: %s", string(msg))
+	}
+
+	pdfBytes, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, err
+	}
+
+	return pdfBytes, nil
 }

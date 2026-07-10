@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log"
 	"math/rand"
 	"os"
 	clients "payment-service/clients/midtrans"
@@ -315,6 +316,8 @@ func (p *PaymentService) Webhook(ctx context.Context, req *dto.Webhook) error {
 		pdf                []byte
 	)
 
+	log.Println("Webhook masuk")
+
 	/*
 		- semua logic penting dibungkus trx DB supaya:
 		- * update payment
@@ -420,10 +423,13 @@ func (p *PaymentService) Webhook(ctx context.Context, req *dto.Webhook) error {
 					Total: total,
 				},
 			}
+
 			pdf, txErr = p.generatePDF(invoiceRequest)
 			if txErr != nil {
 				return txErr
 			}
+
+			log.Printf("PDF generated, size = %d bytes", len(pdf))
 
 			invoiceLink, txErr = p.uploadToMinio(ctx, invoiceNumber, pdf)
 			if txErr != nil {

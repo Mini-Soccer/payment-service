@@ -3,7 +3,6 @@ module payment-service
 go 1.25.5
 
 require (
-	github.com/SebastiaanKlippert/go-wkhtmltopdf v1.9.3
 	github.com/dustin/go-humanize v1.0.1
 	github.com/google/uuid v1.6.0
 	github.com/midtrans/midtrans-go v1.3.8

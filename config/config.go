@@ -28,6 +28,7 @@ type AppConfig struct {
 	Kafka                 Kafka
 	Midtrans              Midtrans
 	Minio                 Minio
+	Gotenberg             Gotenberg
 }
 
 type Database struct {
@@ -77,6 +78,10 @@ type Midtrans struct {
 	ServerKey    string
 	ClientKey    string
 	IsProduction bool
+}
+
+type Gotenberg struct {
+	Url string
 }
 
 func mustEnv(key string) string {
@@ -152,6 +157,9 @@ func Load() AppConfig {
 			ServerKey:    mustEnv("MIDTRANS_SERVER_KEY"),
 			ClientKey:    mustEnv("MIDTRANS_CLIENT_KEY"),
 			IsProduction: midtransIsProd,
+		},
+		Gotenberg: Gotenberg{
+			Url: mustEnv("GOTENBERG_URL"),
 		},
 	}
 }
